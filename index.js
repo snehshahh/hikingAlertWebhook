@@ -14,6 +14,8 @@ const db = admin.firestore();
 
 const app = express().use(body_parser.json());
 
+const mytoken = process.env.MYTOKEN; // Replace with your unique verify token
+
 app.listen(process.env.PORT, () => {
     console.log("webhook is listening");
 });
@@ -21,10 +23,18 @@ app.listen(process.env.PORT, () => {
 // to verify the callback url from dashboard side - cloud api side
 app.get("/webhook", (req, res) => {
     let mode = req.query["hub.mode"];
-    let challange = req.query["hub.challenge"];
+    let challenge = req.query["hub.challenge"];
+    let token = req.query["hub.verify_token"];
 
-    // Skip the token verification during testing
-    res.status(200).send(challange);
+    if (mode && token) {
+        if (mode === "subscribe" && token === mytoken) {
+            res.status(200).send(challenge);
+        } else {
+            res.status(403).send("Forbidden");
+        }
+    } else {
+        res.status(400).send("Bad Request");
+    }
 });
 
 app.post("/webhook", async (req, res) => {
