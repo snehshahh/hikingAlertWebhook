@@ -33,77 +33,67 @@ app.listen(process.env.PORT, () => {
 
 // Handle both GET and POST requests at the /webhook endpoint
 app.all("/webhook", async (req, res) => {
-    if (req.method === "GET") {
-        // Handle the GET request (for verification)
-        let mode = req.query["hub.mode"];
-        let challenge = req.query["hub.challenge"];
-        let token = req.query["hub.verify_token"];
+  if (req.method === "GET") {
+      // Handle the GET request (for verification)
+      let mode = req.query["hub.mode"];
+      let challenge = req.query["hub.challenge"];
+      let token = req.query["hub.verify_token"];
 
-        if (mode && token) {
-            if (mode === "subscribe" && token === mytoken) {
-                res.status(200).send(challenge);
-            } else {
-                res.status(403).send("Forbidden");
-            }
-        } else {
-            res.status(400).send("Bad Request");
-        }
-    } else if (req.method === "POST") {
-        // Handle the POST request (for webhook processing)
-        let body_param = req.body;
+      if (mode && token) {
+          if (mode === "subscribe" && token === mytoken) {
+              res.status(200).send(challenge);
+          } else {
+              res.status(403).send("Forbidden");
+          }
+      } else {
+          res.status(400).send("Bad Request");
+      }
+  } else if (req.method === "POST") {
+      // Handle the POST request (for webhook processing)
+      let body_param = req.body;
 
-        console.log(JSON.stringify(body_param, null, 2));
+      console.log(JSON.stringify(body_param, null, 2));
 
-        if (body_param.object) {
-            console.log("Inside body param");
-            if (
-                body_param.entry &&
-                body_param.entry[0].changes &&
-                body_param.entry[0].changes[0].value.messages &&
-                body_param.entry[0].changes[0].value.messages[0]
-            ) {
-                let phon_no_id = body_param.entry[0].changes[0].value.metadata.phone_number_id;
-                let from = body_param.entry[0].changes[0].value.messages[0].from;
+      if (body_param.object) {
+          console.log("Inside body param");
+          if (
+              body_param.entry &&
+              body_param.entry[0].changes &&
+              body_param.entry[0].changes[0].value.messages &&
+              body_param.entry[0].changes[0].value.messages[0]
+          ) {
+              let phon_no_id = body_param.entry[0].changes[0].value.metadata.phone_number_id;
+              let from = body_param.entry[0].changes[0].value.messages[0].from;
 
-                // Check if the message is a button response
-                if (body_param.entry[0].changes[0].value.messages[0].interactive) {
-                    let buttonResponse = body_param.entry[0].changes[0].value.messages[0].interactive.button_reply.title;
+              // Store the entire object in Firestore
+              await storeButtonResponse(phon_no_id, from, body_param);
 
-                    console.log("Phone number " + phon_no_id);
-                    console.log("From " + from);
-                    console.log("Button response " + buttonResponse);
-
-                    // Store the button response in Firestore
-                    await storeButtonResponse(phon_no_id, from, buttonResponse);
-
-                    res.sendStatus(200);
-                } else {
-                    res.sendStatus(404);
-                }
-            } else {
-                res.sendStatus(404);
-            }
-        } else {
-            res.sendStatus(404);
-        }
-    } else {
-        res.status(405).send("Method Not Allowed");
-    }
+              res.sendStatus(200);
+          } else {
+              res.sendStatus(404);
+          }
+      } else {
+          res.sendStatus(404);
+      }
+  } else {
+      res.status(405).send("Method Not Allowed");
+  }
 });
 
-async function storeButtonResponse(phoneNumberId, senderNumber, buttonResponse) {
-    try {
-        await db.collection("whatsapp-button-responses").add({
-            phoneNumberId,
-            from: senderNumber,
-            buttonResponse,
-            timestamp: admin.firestore.FieldValue.serverTimestamp()
-        });
-        console.log("Button response stored in Firestore.");
-    } catch (error) {
-        console.error("Error storing button response in Firestore:", error);
-    }
+async function storeButtonResponse(phoneNumberId, senderNumber, body_param) {
+  try {
+      await db.collection("whatsapp-button-responses").add({
+          phoneNumberId,
+          from: senderNumber,
+          body_param,  // Store the entire object
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+      });
+      console.log("Webhook data stored in Firestore.");
+  } catch (error) {
+      console.error("Error storing webhook data in Firestore:", error);
+  }
 }
+
 
 // Root route
 app.get("/", (req, res) => {
