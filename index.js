@@ -1,7 +1,25 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const admin = require('firebase-admin');
-const serviceAccount = require('./hikingalert-260bf-firebase-adminsdk-8rkbb-24973cba1e.json');
+const axios = require('axios'); // Import fs module to write logs to a file
+require('dotenv').config();
+
+// Initialize Firebase Admin SDK
+
+// Initialize Firebase Admin SDK with environment variables
+const serviceAccount = {
+    type: process.env.FIREBASE_TYPE,
+    project_id: process.env.FIREBASE_PROJECT_ID,
+    private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+    private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'), // Ensure the key is formatted correctly
+    client_email: process.env.FIREBASE_CLIENT_EMAIL,
+    client_id: process.env.FIREBASE_CLIENT_ID,
+    auth_uri: process.env.FIREBASE_AUTH_URI,
+    token_uri: process.env.FIREBASE_TOKEN_URI,
+    auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_CERT_URL,
+    client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL,
+    universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN
+};
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -18,32 +36,22 @@ app.get('/', (req, res) => {
 });
 
 app.post('/webhook', async (req, res) => {
-  const body = req.body;
+  const payload = req.body;
 
-  // Extract the sender ID, original message, and user response
-  const senderId = body.sender.id;
-  const originalMessage = body.message.text;
-  const userResponse = body.message.text;
+  const userResponse = payload.entry[0].changes[0].value.messages[0].text.body;
+  const johnMessage = payload.entry[0].changes[0].value.messages[1].text.body; 
 
-  try {
-    // Add the response to the Firestore collection
+  if (userResponse === 'Yes, I\'m Back & Safe') {
     await db.collection('TestResponse').add({
-      SenderID: senderId,
-      OriginalMessage: originalMessage,
-      UserResponse: userResponse,
+      userResponse: userResponse,
+      johnMessage: johnMessage
     });
 
-    // Log the question and the answer
-    console.log(`Sender ID: ${senderId}`);
-    console.log(`Original Message: ${originalMessage}`);
-    console.log(`User Response: ${userResponse}`);
-
-    // Send a response to acknowledge the receipt of the message
-    res.sendStatus(200);
-  } catch (error) {
-    console.error('Error writing to Firestore:', error);
-    res.sendStatus(500);
+    fs.appendFileSync('webhook_logs.txt', `User Response: ${userResponse}, John Message: ${johnMessage}\n`);
+  
   }
+
+  res.sendStatus(200);
 });
 
 app.listen(3000, () => {
