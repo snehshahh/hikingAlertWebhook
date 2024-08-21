@@ -14,7 +14,7 @@ const db = admin.firestore();
 
 const app = express().use(body_parser.json());
 
-const mytoken = process.env.MYTOKEN; // Replace with your unique verify token
+const mytoken = "32D721YWSetkhiID5j5yqxICLo8MmDgm"; // Replace with your unique verify token
 
 app.listen(process.env.PORT, () => {
     console.log("webhook is listening");
