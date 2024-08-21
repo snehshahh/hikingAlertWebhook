@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const admin = require('firebase-admin');
+const fs=require('fs');
 const axios = require('axios'); // Import fs module to write logs to a file
 require('dotenv').config();
 
@@ -36,23 +37,31 @@ app.get('/', (req, res) => {
 });
 
 app.post('/webhook', async (req, res) => {
-  const payload = req.body;
+  try {
+    const payload = req.body;
 
-  const userResponse = payload.entry[0].changes[0].value.messages[0].text.body;
-  const johnMessage = payload.entry[0].changes[0].value.messages[1].text.body; 
+    const userResponse = payload.entry[0].changes[0].value.messages[0].text.body;
+    const johnMessage = payload.entry[0].changes[0].value.messages[1].text.body; 
 
-  if (userResponse === 'Yes, I\'m Back & Safe') {
-    await db.collection('TestResponse').add({
-      userResponse: userResponse,
-      johnMessage: johnMessage
+    if (userResponse === 'Yes, I\'m Back & Safe') {
+      await db.collection('TestResponse').add({
+        userResponse: userResponse,
+        johnMessage: johnMessage
+      });
+
+      fs.appendFileSync('webhook_logs.txt', `User Response: ${userResponse}, John Message: ${johnMessage}\n`);
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    await db.collection('TestResponseError').add({
+      error:error
     });
-
-    fs.appendFileSync('webhook_logs.txt', `User Response: ${userResponse}, John Message: ${johnMessage}\n`);
-  
+    console.error('Error handling webhook:', error);
+    res.sendStatus(500); // Send a 500 Internal Server Error response
   }
-
-  res.sendStatus(200);
 });
+
 
 app.listen(3000, () => {
   console.log('Server listening on port 3000');
