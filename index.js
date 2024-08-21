@@ -1,68 +1,83 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const admin = require('firebase-admin');
-const fs=require('fs');
-const axios = require('axios'); // Import fs module to write logs to a file
+const express = require("express");
+const body_parser = require("body-parser");
+const axios = require("axios");
 require('dotenv').config();
 
-// Initialize Firebase Admin SDK
-
-// Initialize Firebase Admin SDK with environment variables
-const serviceAccount = {
-    type: process.env.FIREBASE_TYPE,
-    project_id: process.env.FIREBASE_PROJECT_ID,
-    private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-    private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'), // Ensure the key is formatted correctly
-    client_email: process.env.FIREBASE_CLIENT_EMAIL,
-    client_id: process.env.FIREBASE_CLIENT_ID,
-    auth_uri: process.env.FIREBASE_AUTH_URI,
-    token_uri: process.env.FIREBASE_TOKEN_URI,
-    auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_CERT_URL,
-    client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL,
-    universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN
-};
+const admin = require('firebase-admin');
+const serviceAccount = require('./path/to/serviceAccountKey.json');
 
 admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
+    credential: admin.credential.cert(serviceAccount)
 });
 
 const db = admin.firestore();
 
-const app = express();
-app.use(bodyParser.json());
+const app = express().use(body_parser.json());
 
-// Root route to display a sample message
-app.get('/', (req, res) => {
-  res.send('Sample Testing Of User Whatsapp message');
+app.listen(process.env.PORT, () => {
+    console.log("webhook is listening");
 });
 
-app.post('/webhook', async (req, res) => {
-  try {
-    const payload = req.body;
+// to verify the callback url from dashboard side - cloud api side
+app.get("/webhook", (req, res) => {
+    let mode = req.query["hub.mode"];
+    let challange = req.query["hub.challenge"];
 
-    const userResponse = payload.entry[0].changes[0].value.messages[0].text.body;
-    const johnMessage = payload.entry[0].changes[0].value.messages[1].text.body; 
+    // Skip the token verification during testing
+    res.status(200).send(challange);
+});
 
-    if (userResponse === 'Yes, I\'m Back & Safe') {
-      await db.collection('TestResponse').add({
-        userResponse: userResponse,
-        johnMessage: johnMessage
-      });
+app.post("/webhook", async (req, res) => {
+    let body_param = req.body;
 
-      fs.appendFileSync('webhook_logs.txt', `User Response: ${userResponse}, John Message: ${johnMessage}\n`);
+    console.log(JSON.stringify(body_param, null, 2));
+
+    if (body_param.object) {
+        console.log("inside body param");
+        if (
+            body_param.entry &&
+            body_param.entry[0].changes &&
+            body_param.entry[0].changes[0].value.messages &&
+            body_param.entry[0].changes[0].value.messages[0]
+        ) {
+            let phon_no_id = body_param.entry[0].changes[0].value.metadata.phone_number_id;
+            let from = body_param.entry[0].changes[0].value.messages[0].from;
+
+            // Check if the message is a button response
+            if (body_param.entry[0].changes[0].value.messages[0].interactive) {
+                let buttonResponse = body_param.entry[0].changes[0].value.messages[0].interactive.button_reply.title;
+
+                console.log("phone number " + phon_no_id);
+                console.log("from " + from);
+                console.log("button response " + buttonResponse);
+
+                // Store the button response in Firestore
+                await storeButtonResponse(phon_no_id, from, buttonResponse);
+
+                res.sendStatus(200);
+            } else {
+                res.sendStatus(404);
+            }
+        } else {
+            res.sendStatus(404);
+        }
     }
-
-    res.sendStatus(200);
-  } catch (error) {
-    await db.collection('TestResponseError').add({
-      error:error
-    });
-    console.error('Error handling webhook:', error);
-    res.sendStatus(500); // Send a 500 Internal Server Error response
-  }
 });
 
+async function storeButtonResponse(phoneNumberId, senderNumber, buttonResponse) {
+    try {
+        await db.collection("whatsapp-button-responses").add({
+            phoneNumberId,
+            from: senderNumber,
+            buttonResponse,
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+        console.log("Button response stored in Firestore.");
+    } catch (error) {
+        console.error("Error storing button response in Firestore:", error);
+    }
+}
 
-app.listen(3000, () => {
-  console.log('Server listening on port 3000');
+app.get("/", (req, res) => {
+    res.status(200).send("hello this is webhook setup");
 });
