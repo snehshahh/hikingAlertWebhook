@@ -54,11 +54,13 @@ app.listen(port, () => {
     console.log(`Webhook is listening on port ${port}`);
 });
 
-app.post("/webhook", async (req, res) => {
-    if (req.method === "POST") {
-        // Log the entire body request
-        console.log(JSON.stringify(req.body, null, 2)); // Pretty print the body
+app.all("/webhook", async (req, res) => {
+    // Log the entire request method and URL
+    console.log(`Received ${req.method} request to ${req.originalUrl}`);
+    // Log the entire body request
+    console.log(JSON.stringify(req.body, null, 2)); // Pretty print the body
 
+    if (req.method === "POST") {
         let body_param = req.body;
 
         if (
@@ -78,7 +80,6 @@ app.post("/webhook", async (req, res) => {
                 text_body: messageData.text.body
             };
 
-        
             await logToFirestore(logData);
         }
 
