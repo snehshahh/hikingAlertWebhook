@@ -30,7 +30,7 @@ const mytoken = "32D721YWSetkhiID5j5yqxICLo8MmDgm";
 async function logToFirestore(logData) {
     try {
         // Ensure all required fields are defined
-        if (!logData.phone_number_id || !logData.wa_id || !logData.message_id || !logData.timestamp || !logData.text_body) {
+        if (!logData.phone_number_id || !logData.wa_id || !logData.message_id || !logData.timestamp) {
             console.error("Log data is missing required fields:", logData);
             return; 
         }
@@ -39,8 +39,7 @@ async function logToFirestore(logData) {
             phone_number_id: logData.phone_number_id,
             wa_id: logData.wa_id,
             message_id: logData.message_id,
-            timestamp: logData.timestamp,
-            text_body: logData.button_payload,
+            timestamp: logData.timestamp, // Ensure this is defined
             timestampStored: admin.firestore.FieldValue.serverTimestamp()
         });
         console.log("Relevant log stored in Firestore:", logData);
@@ -76,8 +75,7 @@ app.all("/webhook", async (req, res) => {
                 phone_number_id: body_param.entry[0].changes[0].value.metadata.phone_number_id,
                 wa_id: messageData.from,
                 message_id: messageData.id,
-                timestamp: messageData.timestamp,
-                text_body: messageData.button.payload
+                timestamp: messageData.timestamp
             };
 
             await logToFirestore(logData);
