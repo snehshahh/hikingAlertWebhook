@@ -218,6 +218,7 @@ app.listen(port, () => {
 app.all("/webhook", async (req, res) => {
     if (req.method === "POST") {
         let body_param = req.body;
+        console.log(body_param);
 
         if (
             body_param.entry &&
