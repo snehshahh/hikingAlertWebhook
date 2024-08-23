@@ -40,7 +40,7 @@ async function logToFirestore(logData) {
             wa_id: logData.wa_id,
             message_id: logData.message_id,
             timestamp: logData.timestamp,
-            text_body: logData.text_body,
+            text_body: logData.button_payload,
             timestampStored: admin.firestore.FieldValue.serverTimestamp()
         });
         console.log("Relevant log stored in Firestore:", logData);
