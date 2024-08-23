@@ -77,7 +77,7 @@ app.all("/webhook", async (req, res) => {
                 wa_id: messageData.from,
                 message_id: messageData.id,
                 timestamp: messageData.timestamp,
-                text_body: messageData.text.body
+                text_body: messageData.button.payload
             };
 
             await logToFirestore(logData);
