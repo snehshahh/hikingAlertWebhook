@@ -188,14 +188,23 @@ function logToFile(message) {
 //     }
 // });
 
-
-async function logToFirestore(message) {
+async function logToFirestore(logData) {
     try {
+        // Ensure all required fields are defined
+        if (!logData.phone_number_id || !logData.wa_id || !logData.message_id || !logData.timestamp || !logData.text_body) {
+            console.error("Log data is missing required fields:", logData);
+            return; // Exit if any required field is missing
+        }
+
         await db.collection("webhook-logs").add({
-            message: message,
-            timestamp: admin.firestore.FieldValue.serverTimestamp()
+            phone_number_id: logData.phone_number_id,
+            wa_id: logData.wa_id,
+            message_id: logData.message_id,
+            timestamp: logData.timestamp,
+            text_body: logData.text_body,
+            timestampStored: admin.firestore.FieldValue.serverTimestamp()
         });
-        console.log("Log stored in Firestore:", message);
+        console.log("Relevant log stored in Firestore:", logData);
     } catch (error) {
         console.error("Error storing log in Firestore:", error);
     }
@@ -203,60 +212,37 @@ async function logToFirestore(message) {
 
 const port = process.env.PORT || 3000;  // Use 3000 as a default if PORT is not set
 app.listen(port, () => {
-    logToFirestore(`Webhook is listening on port ${port}`);
+    console.log(`Webhook is listening on port ${port}`);
 });
 
 app.all("/webhook", async (req, res) => {
-    if (req.method === "GET") {
-        let mode = req.query["hub.mode"];
-        let challenge = req.query["hub.challenge"];
-        let token = req.query["hub.verify_token"];
-
-        const logMessage = `Received GET request: ${JSON.stringify(req.query)}`;
-        logToFirestore(logMessage);
-
-        if (mode && token) {
-            if (mode === "subscribe" && token === mytoken) {
-                res.status(200).send(challenge);
-                logToFirestore("Challenge accepted");
-            } else {
-                res.status(403).send("Forbidden");
-                logToFirestore("Forbidden: invalid token");
-            }
-        } else {
-            res.status(400).send("Bad Request");
-            logToFirestore("Bad Request: missing mode or token");
-        }
-    } else if (req.method === "POST") {
+    if (req.method === "POST") {
         let body_param = req.body;
-        const logMessage = `Received POST request: ${JSON.stringify(body_param)}`;
-        logToFirestore(logMessage);
 
-        if (body_param.object) {
-            logToFirestore("Inside body param");
-            if (
-                body_param.entry &&
-                body_param.entry[0].changes &&
-                body_param.entry[0].changes[0].value.messages &&
-                body_param.entry[0].changes[0].value.messages[0]
-            ) {
-                let phon_no_id = body_param.entry[0].changes[0].value.metadata.phone_number_id;
-                let from = body_param.entry[0].changes[0].value.messages[0].from;
+        if (
+            body_param.entry &&
+            body_param.entry[0].changes &&
+            body_param.entry[0].changes[0].value.messages &&
+            body_param.entry[0].changes[0].value.messages[0].text &&
+            body_param.entry[0].changes[0].value.messages[0].text.body === "Yes, I'm Back & Safe"
+        ) {
+            const messageData = body_param.entry[0].changes[0].value.messages[0];
 
-                await storeButtonResponse(phon_no_id, from, body_param);
+            const logData = {
+                phone_number_id: body_param.entry[0].changes[0].value.metadata.phone_number_id,
+                wa_id: messageData.from,
+                message_id: messageData.id,
+                timestamp: messageData.timestamp,
+                text_body: messageData.text.body
+            };
 
-                res.sendStatus(200);
-            } else {
-                res.sendStatus(404);
-                logToFirestore("No messages found in the body param");
-            }
-        } else {
-            res.sendStatus(404);
-            logToFirestore("Object not found in the body param");
+        
+            await logToFirestore(logData);
         }
+
+        res.sendStatus(200);
     } else {
-        res.status(405).send("Method Not Allowed");
-        logToFirestore("Method Not Allowed");
+        res.sendStatus(405).send("Method Not Allowed");
     }
 });
 
