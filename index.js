@@ -29,15 +29,6 @@ const app = express().use(body_parser.json());
 
 const mytoken = "32D721YWSetkhiID5j5yqxICLo8MmDgm";
 
-// Specify the path to the log file committed in your repo
-const logFilePath = path.join(__dirname, './webhook_logs.txt');
-
-function logToFile(message) {
-    fs.appendFile(logFilePath, message + '\n', (err) => {
-        if (err) console.error('Error writing to log file:', err);
-    });
-}
-
 
 // app.all("/webhook", async (req, res) => {
 //     if (req.method === "GET") {
@@ -193,7 +184,7 @@ async function logToFirestore(logData) {
         // Ensure all required fields are defined
         if (!logData.phone_number_id || !logData.wa_id || !logData.message_id || !logData.timestamp || !logData.text_body) {
             console.error("Log data is missing required fields:", logData);
-            return; // Exit if any required field is missing
+            return; 
         }
 
         await db.collection("webhook-logs").add({
@@ -215,10 +206,12 @@ app.listen(port, () => {
     console.log(`Webhook is listening on port ${port}`);
 });
 
-app.all("/webhook", async (req, res) => {
+app.post("/webhook", async (req, res) => {
     if (req.method === "POST") {
+        // Log the entire body request
+        console.log(JSON.stringify(req.body, null, 2)); // Pretty print the body
+
         let body_param = req.body;
-        console.log(body_param);
 
         if (
             body_param.entry &&
