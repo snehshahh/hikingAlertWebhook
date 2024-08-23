@@ -1,8 +1,5 @@
 const express = require("express");
 const body_parser = require("body-parser");
-const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
 require('dotenv').config();
 
 const admin = require('firebase-admin');
@@ -29,155 +26,6 @@ const app = express().use(body_parser.json());
 
 const mytoken = "32D721YWSetkhiID5j5yqxICLo8MmDgm";
 
-
-// app.all("/webhook", async (req, res) => {
-//     if (req.method === "GET") {
-//         let mode = req.query["hub.mode"];
-//         let challenge = req.query["hub.challenge"];
-//         let token = req.query["hub.verify_token"];
-
-//         logToFile(`Received GET request: ${JSON.stringify(req.query)}`);
-
-//         if (mode && token) {
-//             if (mode === "subscribe" && token === mytoken) {
-//                 res.status(200).send(challenge);
-//                 logToFile("Challenge accepted");
-//             } else {
-//                 res.status(403).send("Forbidden");
-//                 logToFile("Forbidden: invalid token");
-//             }
-//         } else {
-//             res.status(400).send("Bad Request");
-//             logToFile("Bad Request: missing mode or token");
-//         }
-//     } else if (req.method === "POST") {
-//         let body_param = req.body;
-//         logToFile(`Received POST request: ${JSON.stringify(body_param)}`);
-
-//         if (body_param.object) {
-//             logToFile("Inside body param");
-//             if (
-//                 body_param.entry &&
-//                 body_param.entry[0].changes &&
-//                 body_param.entry[0].changes[0].value.messages &&
-//                 body_param.entry[0].changes[0].value.messages[0]
-//             ) {
-//                 let phon_no_id = body_param.entry[0].changes[0].value.metadata.phone_number_id;
-//                 let from = body_param.entry[0].changes[0].value.messages[0].from;
-
-//                 await storeButtonResponse(phon_no_id, from, body_param);
-
-//                 res.sendStatus(200);
-//             } else {
-//                 res.sendStatus(404);
-//                 logToFile("No messages found in the body param");
-//             }
-//         } else {
-//             res.sendStatus(404);
-//             logToFile("Object not found in the body param");
-//         }
-//     } else {
-//         res.status(405).send("Method Not Allowed");
-//         logToFile("Method Not Allowed");
-//     }
-// });
-
-// // async function storeButtonResponse(phoneNumberId, senderNumber, body_param) {
-// //     try {
-// //         await db.collection("whatsapp-button-responses").add({
-// //             phoneNumberId,
-// //             from: senderNumber,
-// //             body_param,
-// //             timestamp: admin.firestore.FieldValue.serverTimestamp()
-// //         });
-// //         logToFile("Webhook data stored in Firestore.");
-// //         console.log("Webhook data stored in Firestore.");
-// //     } catch (error) {
-// //         logToFile(`Error storing webhook data in Firestore: ${error}`);
-// //         console.error("Error storing webhook data in Firestore:", error);
-// //     }
-// // }
-
-// async function storeButtonResponse(phoneNumberId, senderNumber, body_param) {
-//     try {
-//         // Check if this is a button response
-//         if (body_param.entry && 
-//             body_param.entry[0].changes && 
-//             body_param.entry[0].changes[0].value.messages && 
-//             body_param.entry[0].changes[0].value.messages[0].interactive) {
-            
-//             const buttonResponse = body_param.entry[0].changes[0].value.messages[0].interactive.button_reply.title;
-            
-//             if (buttonResponse === "Yes, I'm Back & Safe") {
-//                 // Store the response data in Firestore
-//                 const docRef = await db.collection("whatsapp-button-responses").add({
-//                     phoneNumberId,
-//                     from: senderNumber,
-//                     response: buttonResponse,
-//                     fullMessage: body_param,
-//                     timestamp: admin.firestore.FieldValue.serverTimestamp()
-//                 });
-//                 logToFile(`User response "Yes, I'm Back & Safe" stored in Firestore with ID: ${docRef.id}`);
-//                 console.log(`User response "Yes, I'm Back & Safe" stored in Firestore with ID: ${docRef.id}`);
-//             }
-//         }
-//     } catch (error) {
-//         logToFile(`Error storing user response in Firestore: ${error.message}`);
-//         console.error("Error storing user response in Firestore:", error);
-//     }
-// }
-
-// app.all("/webhook", async (req, res) => {
-//     if (req.method === "GET") {
-//         let mode = req.query["hub.mode"];
-//         let challenge = req.query["hub.challenge"];
-//         let token = req.query["hub.verify_token"];
-
-//         logToConsole(`Received GET request: ${JSON.stringify(req.query)}`);
-
-//         if (mode && token) {
-//             if (mode === "subscribe" && token === mytoken) {
-//                 res.status(200).send(challenge);
-//                 logToConsole("Challenge accepted");
-//             } else {
-//                 res.status(403).send("Forbidden");
-//                 logToConsole("Forbidden: invalid token");
-//             }
-//         } else {
-//             res.status(400).send("Bad Request");
-//             logToConsole("Bad Request: missing mode or token");
-//         }
-//     } else if (req.method === "POST") {
-//         let body_param = req.body;
-//         logToConsole(`Received POST request: ${JSON.stringify(body_param)}`);
-
-//         if (body_param.object) {
-//             logToConsole("Inside body param");
-//             if (
-//                 body_param.entry &&
-//                 body_param.entry[0].changes &&
-//                 body_param.entry[0].changes[0].value.messages &&
-//                 body_param.entry[0].changes[0].value.messages[0]
-//             ) {
-//                 let phon_no_id = body_param.entry[0].changes[0].value.metadata.phone_number_id;
-//                 let from = body_param.entry[0].changes[0].value.messages[0].from;
-
-//                 await storeButtonResponse(phon_no_id, from, body_param);
-
-//                 res.sendStatus(200);
-//             } else {
-//                 res.sendStatus(404);
-//                 logToConsole("No messages found in the body param");
-//             }
-//         } else {
-//             res.sendStatus(404);
-//             logToConsole("Object not found in the body param");
-//         }
-//     } else {
-//         res.status(405).send("Method Not Allowed");
-//         logToConsole("Method Not Allowed");
-//     }
-// });
 
 async function logToFirestore(logData) {
     try {
@@ -242,5 +90,4 @@ app.post("/webhook", async (req, res) => {
 
 app.get("/", (req, res) => {
     res.status(200).send("Hello, this is webhook setup");
-    logToFile("Root route accessed");
 });
