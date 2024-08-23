@@ -56,9 +56,9 @@ app.listen(port, () => {
 
 app.all("/webhook", async (req, res) => {
     // Log the entire request method and URL
-    console.log(`Received ${req.method} request to ${req.originalUrl}`);
+    //console.log(`Received ${req.method} request to ${req.originalUrl}`);
     // Log the entire body request
-    console.log(JSON.stringify(req.body, null, 2)); // Pretty print the body
+    //console.log(JSON.stringify(req.body, null, 2)); // Pretty print the body
 
     if (req.method === "POST") {
         let body_param = req.body;
@@ -67,8 +67,8 @@ app.all("/webhook", async (req, res) => {
             body_param.entry &&
             body_param.entry[0].changes &&
             body_param.entry[0].changes[0].value.messages &&
-            body_param.entry[0].changes[0].value.messages[0].text &&
-            body_param.entry[0].changes[0].value.messages[0].text.body === "Yes, I'm Back & Safe"
+            body_param.entry[0].changes[0].value.messages[0].button &&
+            body_param.entry[0].changes[0].value.messages[0].button.payload === "Yes, I'm Back & Safe"
         ) {
             const messageData = body_param.entry[0].changes[0].value.messages[0];
 
