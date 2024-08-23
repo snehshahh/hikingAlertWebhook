@@ -38,15 +38,6 @@ function logToFile(message) {
     });
 }
 
-function logToConsole(message) {
-    console.log(message); // Define logToConsole to log messages to the console
-}
-
-const port = process.env.PORT || 3000;  // Use 3001 as a default if PORT is not set
-app.listen(port, () => {
-    logToConsole(`Webhook is listening on port ${port}`);
-    console.log(`Webhook is listening on port ${port}`);
-});
 
 // app.all("/webhook", async (req, res) => {
 //     if (req.method === "GET") {
@@ -145,32 +136,104 @@ app.listen(port, () => {
 //     }
 // }
 
+// app.all("/webhook", async (req, res) => {
+//     if (req.method === "GET") {
+//         let mode = req.query["hub.mode"];
+//         let challenge = req.query["hub.challenge"];
+//         let token = req.query["hub.verify_token"];
+
+//         logToConsole(`Received GET request: ${JSON.stringify(req.query)}`);
+
+//         if (mode && token) {
+//             if (mode === "subscribe" && token === mytoken) {
+//                 res.status(200).send(challenge);
+//                 logToConsole("Challenge accepted");
+//             } else {
+//                 res.status(403).send("Forbidden");
+//                 logToConsole("Forbidden: invalid token");
+//             }
+//         } else {
+//             res.status(400).send("Bad Request");
+//             logToConsole("Bad Request: missing mode or token");
+//         }
+//     } else if (req.method === "POST") {
+//         let body_param = req.body;
+//         logToConsole(`Received POST request: ${JSON.stringify(body_param)}`);
+
+//         if (body_param.object) {
+//             logToConsole("Inside body param");
+//             if (
+//                 body_param.entry &&
+//                 body_param.entry[0].changes &&
+//                 body_param.entry[0].changes[0].value.messages &&
+//                 body_param.entry[0].changes[0].value.messages[0]
+//             ) {
+//                 let phon_no_id = body_param.entry[0].changes[0].value.metadata.phone_number_id;
+//                 let from = body_param.entry[0].changes[0].value.messages[0].from;
+
+//                 await storeButtonResponse(phon_no_id, from, body_param);
+
+//                 res.sendStatus(200);
+//             } else {
+//                 res.sendStatus(404);
+//                 logToConsole("No messages found in the body param");
+//             }
+//         } else {
+//             res.sendStatus(404);
+//             logToConsole("Object not found in the body param");
+//         }
+//     } else {
+//         res.status(405).send("Method Not Allowed");
+//         logToConsole("Method Not Allowed");
+//     }
+// });
+
+
+async function logToFirestore(message) {
+    try {
+        await db.collection("webhook-logs").add({
+            message: message,
+            timestamp: admin.firestore.FieldValue.serverTimestamp()
+        });
+        console.log("Log stored in Firestore:", message);
+    } catch (error) {
+        console.error("Error storing log in Firestore:", error);
+    }
+}
+
+const port = process.env.PORT || 3000;  // Use 3000 as a default if PORT is not set
+app.listen(port, () => {
+    logToFirestore(`Webhook is listening on port ${port}`);
+});
+
 app.all("/webhook", async (req, res) => {
     if (req.method === "GET") {
         let mode = req.query["hub.mode"];
         let challenge = req.query["hub.challenge"];
         let token = req.query["hub.verify_token"];
 
-        logToConsole(`Received GET request: ${JSON.stringify(req.query)}`);
+        const logMessage = `Received GET request: ${JSON.stringify(req.query)}`;
+        logToFirestore(logMessage);
 
         if (mode && token) {
             if (mode === "subscribe" && token === mytoken) {
                 res.status(200).send(challenge);
-                logToConsole("Challenge accepted");
+                logToFirestore("Challenge accepted");
             } else {
                 res.status(403).send("Forbidden");
-                logToConsole("Forbidden: invalid token");
+                logToFirestore("Forbidden: invalid token");
             }
         } else {
             res.status(400).send("Bad Request");
-            logToConsole("Bad Request: missing mode or token");
+            logToFirestore("Bad Request: missing mode or token");
         }
     } else if (req.method === "POST") {
         let body_param = req.body;
-        logToConsole(`Received POST request: ${JSON.stringify(body_param)}`);
+        const logMessage = `Received POST request: ${JSON.stringify(body_param)}`;
+        logToFirestore(logMessage);
 
         if (body_param.object) {
-            logToConsole("Inside body param");
+            logToFirestore("Inside body param");
             if (
                 body_param.entry &&
                 body_param.entry[0].changes &&
@@ -185,38 +248,17 @@ app.all("/webhook", async (req, res) => {
                 res.sendStatus(200);
             } else {
                 res.sendStatus(404);
-                logToConsole("No messages found in the body param");
+                logToFirestore("No messages found in the body param");
             }
         } else {
             res.sendStatus(404);
-            logToConsole("Object not found in the body param");
+            logToFirestore("Object not found in the body param");
         }
     } else {
         res.status(405).send("Method Not Allowed");
-        logToConsole("Method Not Allowed");
+        logToFirestore("Method Not Allowed");
     }
 });
-
-async function storeButtonResponse(phoneNumberId, senderNumber, body_param) {
-    try {
-        // Check if this is a button response
-        if (body_param.entry && 
-            body_param.entry[0].changes && 
-            body_param.entry[0].changes[0].value.messages && 
-            body_param.entry[0].changes[0].value.messages[0].interactive) {
-            
-            const buttonResponse = body_param.entry[0].changes[0].value.messages[0].interactive.button_reply.title;
-            
-            if (buttonResponse === "Yes, I'm Back & Safe") {
-                logToConsole(`User response: ${buttonResponse}`);
-                logToConsole(`Full message: ${JSON.stringify(body_param)}`);
-            }
-        }
-    } catch (error) {
-        logToConsole(`Error processing user response: ${error.message}`);
-    }
-}
-
 
 app.get("/", (req, res) => {
     res.status(200).send("Hello, this is webhook setup");
