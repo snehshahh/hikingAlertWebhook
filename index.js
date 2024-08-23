@@ -70,6 +70,54 @@ app.all("/webhook", async (req, res) => {
             body_param.entry[0].changes[0].value.messages[0].button.payload === "Yes, I'm Back & Safe"
         ) {
             const messageData = body_param.entry[0].changes[0].value.messages[0];
+            const ref = await db.collection('WhatsAppLog').doc(messageData.id).get();
+            if (ref.exists) {
+                // Extract the alertTableId from the document
+                const alertTableId = ref.data().alertTableId;
+                const alertTableRef = await db.collection('AlertTable').doc(alertTableId).get();
+                const alertData = alertTableRef.data();
+                const trip = alertData.TripName;
+                const updateData = {
+                  BackAndSafeTime: new Date(), 
+                  IsTripCompleted: true
+                };
+                await db.collection('AlertTable').doc(alertTableId).update(updateData);
+                const response = await axios.post(
+                    process.env.FACEBOOK_GRAPH_API_URL,
+                    {
+                      messaging_product: "whatsapp",
+                      to: messageData.from, // Replace with the actual recipient phone number
+                      type: "template",
+                      template: {
+                        name: "safe_return_confirmation",
+                        language: {
+                          code: "en"
+                        },
+                        components: [
+                          {
+                            type: "body",
+                            parameters: [
+                              {
+                                type: "text",
+                                text: trip
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      headers: {
+                        Authorization: `Bearer ${process.env.FACEBOOK_GRAPH_API_TOKEN}`,
+                        'Content-Type': 'application/json'
+                      }
+                    }
+                  );
+                  console.log('Message sent:', response.data);
+                console.log('AlertTable updated successfully');
+              } else {
+                console.log('No document found in WhatsAppLog');
+              }
 
             const logData = {
                 phone_number_id: body_param.entry[0].changes[0].value.metadata.phone_number_id,
