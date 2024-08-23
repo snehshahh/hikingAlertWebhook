@@ -38,9 +38,10 @@ function logToFile(message) {
     });
 }
 
-app.listen(process.env.PORT, () => {
-    logToFile("Webhook is listening");
-    console.log("Webhook is listening");
+const port = process.env.PORT || 3000;  // Use 3000 as a default if PORT is not set
+app.listen(port, () => {
+    logToFile(`Webhook is listening on port ${port}`);
+    console.log(`Webhook is listening on port ${port}`);
 });
 
 app.all("/webhook", async (req, res) => {
@@ -95,19 +96,48 @@ app.all("/webhook", async (req, res) => {
     }
 });
 
+// async function storeButtonResponse(phoneNumberId, senderNumber, body_param) {
+//     try {
+//         await db.collection("whatsapp-button-responses").add({
+//             phoneNumberId,
+//             from: senderNumber,
+//             body_param,
+//             timestamp: admin.firestore.FieldValue.serverTimestamp()
+//         });
+//         logToFile("Webhook data stored in Firestore.");
+//         console.log("Webhook data stored in Firestore.");
+//     } catch (error) {
+//         logToFile(`Error storing webhook data in Firestore: ${error}`);
+//         console.error("Error storing webhook data in Firestore:", error);
+//     }
+// }
+
 async function storeButtonResponse(phoneNumberId, senderNumber, body_param) {
     try {
-        await db.collection("whatsapp-button-responses").add({
-            phoneNumberId,
-            from: senderNumber,
-            body_param,
-            timestamp: admin.firestore.FieldValue.serverTimestamp()
-        });
-        logToFile("Webhook data stored in Firestore.");
-        console.log("Webhook data stored in Firestore.");
+        // Check if this is a button response
+        if (body_param.entry && 
+            body_param.entry[0].changes && 
+            body_param.entry[0].changes[0].value.messages && 
+            body_param.entry[0].changes[0].value.messages[0].interactive) {
+            
+            const buttonResponse = body_param.entry[0].changes[0].value.messages[0].interactive.button_reply.title;
+            
+            if (buttonResponse === "Yes, I'm Back & Safe") {
+                // Store the response data in Firestore
+                const docRef = await db.collection("whatsapp-button-responses").add({
+                    phoneNumberId,
+                    from: senderNumber,
+                    response: buttonResponse,
+                    fullMessage: body_param,
+                    timestamp: admin.firestore.FieldValue.serverTimestamp()
+                });
+                logToFile(`User response "Yes, I'm Back & Safe" stored in Firestore with ID: ${docRef.id}`);
+                console.log(`User response "Yes, I'm Back & Safe" stored in Firestore with ID: ${docRef.id}`);
+            }
+        }
     } catch (error) {
-        logToFile(`Error storing webhook data in Firestore: ${error}`);
-        console.error("Error storing webhook data in Firestore:", error);
+        logToFile(`Error storing user response in Firestore: ${error.message}`);
+        console.error("Error storing user response in Firestore:", error);
     }
 }
 
