@@ -70,6 +70,7 @@ app.all("/webhook", async (req, res) => {
             body_param.entry[0].changes[0].value.messages[0].button.payload === "Yes, I'm Back & Safe"
         ) {
             const messageData = body_param.entry[0].changes[0].value.messages[0];
+            console.log(messageData.id);
             const ref = await db.collection('WhatsAppLog').doc(messageData.id).get();
             if (ref.exists) {
                 // Extract the alertTableId from the document
