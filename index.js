@@ -72,7 +72,7 @@ app.all("/webhook", async (req, res) => {
             const messageData = body_param.entry[0].changes[0].value.messages[0];
             const contextId = messageData.context ? messageData.context.id : messageData.id;
             console.log(contextId);
-            const ref = await db.collection('WhatsAppLog').doc(messageData.id).get();
+            const ref = await db.collection('WhatsAppLog').doc(contextId).get();
             if (ref.exists) {
                 // Extract the alertTableId from the document
                 const alertTableId = ref.data().alertTableId;
@@ -127,10 +127,8 @@ app.all("/webhook", async (req, res) => {
                 message_id: contextId,
                 timestamp: messageData.timestamp
             };
-
             await logToFirestore(logData);
         }
-
         res.sendStatus(200);
     } else {
         res.sendStatus(405).send("Method Not Allowed");
