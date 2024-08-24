@@ -1,5 +1,6 @@
 const express = require("express");
 const body_parser = require("body-parser");
+const axios=require("axios");
 require('dotenv').config();
 
 const admin = require('firebase-admin');
@@ -71,7 +72,8 @@ app.all("/webhook", async (req, res) => {
         ) {
             const messageData = body_param.entry[0].changes[0].value.messages[0];
             const contextId = messageData.context ? messageData.context.id : messageData.id;
-            console.log(contextId);
+            console.log("Sending Id",contextId);
+            console.log("Message From Number",messageData.from);
             const ref = await db.collection('WhatsAppLog').doc(contextId).get();
             if (ref.exists) {
                 // Extract the alertTableId from the document
