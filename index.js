@@ -123,13 +123,13 @@ app.all("/webhook", async (req, res) => {
                 console.log('No document found in WhatsAppLog');
               }
 
-            const logData = {
-                phone_number_id: body_param.entry[0].changes[0].value.metadata.phone_number_id,
-                wa_id: messageData.from,
-                message_id: contextId,
-                timestamp: messageData.timestamp
-            };
-            await logToFirestore(logData);
+            // const logData = {
+            //     phone_number_id: body_param.entry[0].changes[0].value.metadata.phone_number_id,
+            //     wa_id: messageData.from,
+            //     message_id: contextId,
+            //     timestamp: messageData.timestamp
+            // };
+            //await logToFirestore(logData);
         }
         res.sendStatus(200);
     } else {
