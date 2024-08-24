@@ -57,7 +57,7 @@ app.all("/webhook", async (req, res) => {
     // Log the entire request method and URL
     //console.log(`Received ${req.method} request to ${req.originalUrl}`);
     // Log the entire body request
-    console.log(JSON.stringify(req.body, null, 2)); // Pretty print the body
+    //console.log(JSON.stringify(req.body, null, 2)); // Pretty print the body
 
     if (req.method === "POST") {
         let body_param = req.body;
@@ -70,7 +70,8 @@ app.all("/webhook", async (req, res) => {
             body_param.entry[0].changes[0].value.messages[0].button.payload === "Yes, I'm Back & Safe"
         ) {
             const messageData = body_param.entry[0].changes[0].value.messages[0];
-            console.log(messageData.id);
+            const contextId = messageData.context ? messageData.context.id : messageData.id;
+            console.log(contextId);
             const ref = await db.collection('WhatsAppLog').doc(messageData.id).get();
             if (ref.exists) {
                 // Extract the alertTableId from the document
@@ -123,7 +124,7 @@ app.all("/webhook", async (req, res) => {
             const logData = {
                 phone_number_id: body_param.entry[0].changes[0].value.metadata.phone_number_id,
                 wa_id: messageData.from,
-                message_id: messageData.id,
+                message_id: contextId,
                 timestamp: messageData.timestamp
             };
 
