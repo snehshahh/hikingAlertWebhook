@@ -80,6 +80,10 @@ app.all("/webhook", async (req, res) => {
                 const alertTableId = ref.data().alertTableId;
                 const alertTableRef = await db.collection('AlertTable').doc(alertTableId).get();
                 const alertData = alertTableRef.data();
+                const userId=alertData.UserId;
+                const userTableRef = await db.collection('UserTable').doc(userId).get();
+                const userData = userTableRef.data();
+                const userName=userData.FullName;
                 const trip = alertData.TripName;
                 const updateData = {
                   BackAndSafeTime: new Date(), 
@@ -103,7 +107,7 @@ app.all("/webhook", async (req, res) => {
                             parameters: [
                               {
                                 type: "text",
-                                text: "Shravan"
+                                text: userName
                               },
                               {
                                 type: "text",
