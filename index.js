@@ -93,7 +93,7 @@ app.all("/webhook", async (req, res) => {
                       to: messageData.from, // Replace with the actual recipient phone number
                       type: "template",
                       template: {
-                        name: "safe_return_confirmation",
+                        name: "safe_return_confirmation_beta2",
                         language: {
                           code: "en"
                         },
@@ -101,6 +101,10 @@ app.all("/webhook", async (req, res) => {
                           {
                             type: "body",
                             parameters: [
+                              {
+                                type: "text",
+                                text: "Shravan"
+                              },
                               {
                                 type: "text",
                                 text: trip
